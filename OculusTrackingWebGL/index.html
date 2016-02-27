@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head0>
+    <meta charset="utf-8">
+    <title>WebVR Test</title>
+  </head>
+
+  <body>
+    <canvas></canvas>
+  </body>
+
+  <script>
+
+  var HMD, PositionSensor;
+  var x, y, z;
+  var r = 10;
+  var canvas = document.querySelector("canvas");
+  var context = canvas.getContext("2d");
+
+  navigator.getVRDevices().then(function(devices) {
+    // Partition devices into list of HMDVRDevices and PositionSensorVRDevices
+    var device_lists = devices.reduce(function(acc, device) {
+      if (device instanceof HMDVRDevice) return [[...acc[0], device], acc[1]];
+      if (device instanceof PositionSensorVRDevice) return [acc[0], [...acc[1], device]];
+      return acc;
+    }, [[], []]);
+
+    // Split device_lists into list of HMDVRDevices and list of PositionSensorVRDevices
+    var HMDVRDevices = device_lists[0];
+    var PositionSensorVRDevices = device_lists[1];
+
+    // Find indices of pairs of elements in each list with matching harwareUnitIds
+    var indices_of_pairs = HMDVRDevices.reduce(function(acc, HMDVRDevice, idx1) {
+      return [
+        ...acc,
+        ...PositionSensorVRDevices.filter(function(PositionSensorVRDevice) {
+          return HMDVRDevice.harwareUnitId == PositionSensorVRDevice.harwareUnitId;
+        }).map(function(PositionSensorVRDevice, idx2) {
+          return [idx1, idx2];
+        })
+      ];
+    }, []);
+
+    // Assign global VR objects to objects whose indices are first pair
+    if (indices_of_pairs.length > 0) {
+      HMD = HMDVRDevices[indices_of_pairs[0][0]];
+      PositionSensor = PositionSensorVRDevices[indices_of_pairs[0][1]];
+    }
+  });
+
+  function draw() {
+    // Determine current dimensions of window
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+    // Set canvas dimensions to match window dimensions
+    canvas.width = width;
+    canvas.height = height;
+
+    var state;
+    if (PositionSensor) state = PositionSensor.getState();
+
+    if (state && state.hasPosition) {
+      x = state.position.x * width + width / 2;
+      y = -state.position.y * height + height / 2;
+      z = state.position.z;
+      context.fillStyle = "steelblue";
+      context.beginPath();
+      context.arc(x, y, r, 0, 2 * Math.PI);
+      context.fill();
+    }
+
+    // Animate next frame recursively
+    requestAnimationFrame(draw);
+  }
+
+  // Start drawing
+  draw();
+
+  </script>
+</html>
