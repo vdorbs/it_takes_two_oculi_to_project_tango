@@ -1,0 +1,148 @@
+<!-- DISCLAIMER: this code is from the Mozilla tutorial and mostly copied
+so I take no responsibility for how shitty it looks. It works about as well
+as their live application does, but it looks like more of a cardboard app rather
+than an Oculus one. It also doesn't work if the Oculus isn't plugged in, because
+for some reason Mozilla didn't want to account for that.
+The tutorial for slightly better documentation and explanations:
+https://developer.mozilla.org/en-US/docs/Web/API/WebVR_API/Using_the_WebVR_API-->
+<!DOCTYPE html>
+<html lang="en-US">
+	<head>
+		<meta charset="utf-8">
+    <title>Test</title>
+	</head>
+	<body>
+    <script>
+		var gHMD, gPositionSensor;
+
+		//detect oculus devices, victor did this for the live project
+		navigator.getVRDevices().then(function(devices) {
+		  for (var i = 0; i < devices.length; ++i) {
+		    if (devices[i] instanceof HMDVRDevice) {
+		      gHMD = devices[i];
+		      break;
+		    }
+		  }
+
+		  if (gHMD) {
+		    for (var i = 0; i < devices.length; ++i) {
+		      if (devices[i] instanceof PositionSensorVRDevice && devices[i].hardwareUnitId === gHMD.hardwareUnitId) {
+		        gPositionSensor = devices[i];
+		        break;
+		      }
+		    }
+		  }
+		});
+			var xPos, yPos, zPos;
+			var myCanvas = document.createElement('canvas');
+			var ctx = myCanvas.getContext('2d');
+			var body = document.querySelector('body');
+			body.appendChild(myCanvas);
+
+			var image = new Image();
+			image.src = './firefox.png';
+			image.onload  = draw;
+
+			function draw() {
+				WIDTH = window.innerWidth;
+				HEIGHT = window.innerHeight;
+				lCtrOffset = WIDTH*0.25;
+				rCtrOffset = WIDTH*0.25;
+				myCanvas.width = WIDTH;
+				myCanvas.height = HEIGHT;
+
+				setView();
+				drawImages();
+				//drawCrosshairs(); not worth the time
+
+				requestAnimationFrame(draw);
+			}
+
+			// gets the position info from the oculus, transforms and records it
+      function setView() {
+				var posState = gPositionSensor.getState();
+				if(posState.hasPosition) {
+					//stupid useless textbox that breaks everything without the css
+					//posPara.textContent = "Position: x" + Math.round(posState.position.x) +
+					//                          " y" + Math.round(posState.position.y) + " z"
+					//													+ Math.round(posState.position.z);
+					xPos = -posState.position.x * WIDTH * 2;
+					yPos = posState.position.y * HEIGHT * 2;
+					if (-posState.position.z > 0.01) {
+						zPos = -posState.position.z;
+					} else {
+						zPos = 0.01;
+					}
+				}
+
+				if(posState.hasOrientation) {
+				// stupid text box again
+				//    orientPara.textContent = 'Orientation: x' + roundToTwo(posState.orientation.x) + " y"
+				//                                + roundToTwo(posState.orientation.y) + " z"
+				//                                + roundToTwo(posState.orientation.z);
+				    xOrient = posState.orientation.x * WIDTH;
+				    yOrient = -posState.orientation.y * HEIGHT * 2;
+				    zOrient = posState.orientation.z * 180;
+
+				  }
+				//stupid text box again
+				//timePara.textContent = 'Timestamp: ' + Math.floor(posState.timeStamp);
+			}
+
+			function drawImages() {
+				ctx.fillStyle = 'white';
+				ctx.fillRect(0,0,WIDTH,HEIGHT),
+
+				//draw left firefox emblem
+				ctx.save();
+				ctx.beginPath();
+				ctx.translate(WIDTH/4,HEIGHT/2);
+				ctx.rect(-(WIDTH/4),-(HEIGHT/2), WIDTH/2, HEIGHT);
+
+				ctx.clip();
+				ctx.rotate(zOrient * Math.PI / 180);
+
+				ctx.drawImage(image,-(WIDTH/4)+lCtrOffset-((image.width)/(2*(1/zPos)))+xPos-yOrient,-((image.height)/(2*(1/zPos)))+yPos+xOrient,image.width*zPos,image.height*zPos);
+				ctx.strokeStyle = "black";
+				ctx.stroke();
+				ctx.restore()
+
+				//draw right firefox emblem
+				ctx.save();
+				ctx.beginPath();
+				ctx.translate(3*WIDTH/4,HEIGHT/2);
+				ctx.rect(-(WIDTH/4),-(HEIGHT/2), WIDTH/2, HEIGHT);
+
+				ctx.clip();
+				ctx.rotate(zOrient * Math.PI / 180);
+
+				ctx.drawImage(image,(WIDTH/4)-rCtrOffset-((image.width)/(2*(1/zPos)))+xPos-yOrient,-((image.height)/(2*(1/zPos)))+yPos+xOrient,image.width*zPos,image.height*zPos);
+
+
+				ctx.strokeStyle = "black";
+				ctx.stroke();
+				ctx.restore()
+			}
+
+			myCanvas.addEventListener('click',fullScreen,false);
+			function fullScreen() {
+			  if (myCanvas.requestFullscreen) {
+			    myCanvas.requestFullscreen();
+			  } else if (myCanvas.msRequestFullscreen) {
+			    myCanvas.msRequestFullscreen();
+			  } else if (myCanvas.mozRequestFullScreen) {
+			    myCanvas.mozRequestFullScreen();
+			  } else if (myCanvas.webkitRequestFullscreen) {
+			    myCanvas.webkitRequestFullscreen();
+
+			  }
+			}
+    </script>
+		<button>Reset Sensor</button>
+		<script>
+		document.querySelector('button').onclick = function() {
+  		gPositionSensor.resetSensor();
+		}
+		</script>
+	</body>
+</html>
