@@ -1,0 +1,9 @@
+Things we need our service to do:
+Store x,y,z and rotation variables
+Update variables
+Send current values
+
+login?
+logout?
+create new user?
+
