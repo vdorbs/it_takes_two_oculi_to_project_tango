@@ -7,3 +7,42 @@ login?
 logout?
 create new user?
 
+What needs to be replicated:
+room state
+
+should do load-balanced queries
+room state needs to be synchronized
+object file of room can be kept locally
+
+Do we want security?
+
+Create a group with some values, create a handler for update and lookup
+
+Group g = new Group ("myGroup");
+Dictionary<string, double> Values = new Dictionary<string,double>();
+g.ViewHandlers += delegate(View v) {
+	Console.Title = "myGroup members "+v.members;
+};
+g.Handlers[UPDATE]+=delegate(string s, double v) {
+	Values[s] = v;
+};
+g.Handlers[LOOKUP] += delegate(string s) {
+	g.Reply(Values[s]);
+};
+g.Join();
+
+g.OrderedSend(UPDATE,"HARRY",20.75);
+q.Query(ALL, LOOKUP, "HARRY", EOL, resultlist);
+
+vsync deals with large data files -> look into this for the virtual reality scenes
+also do distributed hashtables
+
+
+create some sort of class that stores the values:
+x,y,z,rotation, some sort of user data, messages
+
+create some sort of room object that holds a dictionary as well as some variables
+
+Each instance of the server should have a table of room objects
+
+
