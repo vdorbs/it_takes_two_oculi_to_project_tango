@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset = "utf-8">
+    <title>WebVR Test</title>
+    <script src = "three.min.js"></script>
+  </head>
+
+  <body>
+    <canvas></canvas>
+  </body>
+
+  <script>
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    const canvas = renderer.domElement;
+    renderer.setSize(width, height);
+    document.body.appendChild(canvas);
+
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshBasicMaterial({color: "steelblue"});
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    camera.position.z = 5;
+
+    let vr_display;
+    navigator.getVRDisplays().then(displays => {
+      if (displays.length > 0) vr_display = displays[0];
+    });
+
+    canvas.addEventListener('click', () => {
+      if (vr_display) {
+        if (!vr_display.isPresenting) {
+          vr_display.requestPresent({ source: canvas }).then(function() {});
+        } else {
+          vr_display.exitPresent().then(function() {});
+        }
+      }
+    });
+
+    function onAnimationFrame() {
+
+      if (vr_display) {
+        if (vr_display.isPresenting) {
+          renderer.render(scene, camera);
+          vr_display.submitFrame(vr_display.getPose());
+          vr_display.requestAnimationFrame(onAnimationFrame);
+        } else {
+          renderer.render(scene, camera);
+          requestAnimationFrame(onAnimationFrame);
+        }
+      } else {
+        renderer.render(scene, camera);
+        requestAnimationFrame(onAnimationFrame);
+      }
+    }
+
+    onAnimationFrame();
+
+  </script>
+</html>
