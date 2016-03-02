@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Vsync;
 
 namespace Tango
 {
@@ -8,7 +9,17 @@ namespace Tango
 		public static void Main (string[] args)
 		{
 			Console.WriteLine ("Hello World!");
-			Thread.Sleep (10000);
+			VsyncSystem.Start ();
+			Console.WriteLine ("VSYNC STARTED");
+
+			Group g = new Group ("dataHolder");
+			g.ViewHandlers += (ViewHandler)delegate(View v) {
+				VsyncSystem.WriteLine("New View: " + v);
+				Console.Title = "View " + v.viewid + ", my rank=" + v.GetMyRank();
+			};
+			g.Join ();
+			VsyncSystem.WaitForever ();
+
 		}
 	}
 }

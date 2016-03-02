@@ -1,0 +1,8 @@
+Here are my notes so far with running mono:
+
+Make sure to install Mono and MonoDevelop
+
+To run from the command line I use the aliases...
+
+alias tangoFolder='cd /Users/jaredexter/junior\ year/cs5412/it_takes_two_oculi_to_project_tango/'
+alias tangoDebug='mono /Users/jaredexter/junior\ year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Tango/bin/Debug/Tango.exe'

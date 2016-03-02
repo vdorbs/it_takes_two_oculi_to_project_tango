@@ -1,13 +1,3 @@
-/Users/jaredexter/Projects/Tango/Tango/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
-/Users/jaredexter/Projects/Tango/Tango/bin/Debug/Tango.exe.mdb
-/Users/jaredexter/Projects/Tango/Tango/bin/Debug/Tango.exe
-/Users/jaredexter/Projects/Tango/Tango/obj/x86/Debug/Tango.exe
-/Users/jaredexter/Projects/Tango/Tango/obj/x86/Debug/Tango.exe.mdb
-/Users/jaredexter/junior year/cs5412/Tango/Tango/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
-/Users/jaredexter/junior year/cs5412/Tango/Tango/bin/Debug/Tango.exe.mdb
-/Users/jaredexter/junior year/cs5412/Tango/Tango/bin/Debug/Tango.exe
-/Users/jaredexter/junior year/cs5412/Tango/Tango/obj/x86/Debug/Tango.exe
-/Users/jaredexter/junior year/cs5412/Tango/Tango/obj/x86/Debug/Tango.exe.mdb
 /Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Tango/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
 /Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Tango/bin/Debug/Tango.exe.mdb
 /Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Tango/bin/Debug/Tango.exe

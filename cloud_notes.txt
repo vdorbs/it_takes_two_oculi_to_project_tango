@@ -44,5 +44,5 @@ x,y,z,rotation, some sort of user data, messages
 create some sort of room object that holds a dictionary as well as some variables
 
 Each instance of the server should have a table of room objects
-
+we want to change the default mono port number 
 

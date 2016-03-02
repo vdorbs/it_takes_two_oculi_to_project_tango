@@ -1,0 +1,8 @@
+Vsync V2.2 Revision 2032: 3/2/2016 12:09:51 AM (12:12:55.0618304) ; Compiled for MONO; <: 192.168.0.22>
+Major Vsync Runtime Settings: ORACLESIZE = 3; 
+P2P/ACK port numbers = {9753/9754}; IPMC base portno = 11002
+IPMC address range = {224.0.19.136-224.7.180.168}, MAXIPMCADDRS in use = 25
+---------------------------------------------------------------------------------------------
+... MyAddress = (4998)
+Vsync: Searching for the Vsync ORACLE...
+VSYNC process-id: 4998, my_address = (4998)
