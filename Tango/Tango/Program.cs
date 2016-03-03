@@ -36,7 +36,12 @@ namespace Tango
 		}
 
 	}
-
+	public class handler
+	{
+		public void handle(){
+			Console.WriteLine ("Hi I'm your personal thread");
+		}
+	}
 	class MainClass
 	{
 		public static void Main (string[] args)
@@ -78,11 +83,13 @@ namespace Tango
 			//for (int n = 0; n < 10; n++)
 				//g.OrderedSend (UPDATE);
 			VsyncSystem.WaitForever ();*/
-
+			handler h = new handler ();
 			TcpListener server = new TcpListener (Dns.GetHostEntry("localhost").AddressList[0], 7569);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
 			TcpClient client = server.AcceptTcpClient ();
+			Thread handler = new Thread(new ThreadStart(h.handle));
+			handler.Start ();
 			Console.WriteLine ("A Client Connected!");
 
 		}
