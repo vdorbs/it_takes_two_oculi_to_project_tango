@@ -2,6 +2,9 @@
 using System.Threading;
 using System.Collections.Generic;
 using Vsync;
+using System.Net.Sockets;
+using System.Net;
+using System;
 
 namespace Tango
 {
@@ -18,11 +21,27 @@ namespace Tango
 		}
 	}
 
+	public class room
+	{
+		public string room_name;
+		public Dictionary<string, position> playerLocs;
+		public List<string> players;
+		//Put anything else in here
+
+		public room (string name)
+		{
+			room_name = name;
+			playerLocs = new Dictionary<string, position> ();
+			players = new List<string> ();
+		}
+
+	}
+
 	class MainClass
 	{
 		public static void Main (string[] args)
 		{
-			Dictionary<string, position> valueStore = new Dictionary<string, position> ();
+			/*Dictionary<string, position> valueStore = new Dictionary<string, position> ();
 			const int UPDATE = 0;
 			const int LOOKUP = 1;
 			const int REFRESH = 2;
@@ -47,12 +66,24 @@ namespace Tango
 			g.Handlers [REFRESH] += (Action)delegate() {
 				g.Reply(valueStore);
 			};
+			//g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
+			//	g.SendChkpt(valueStore);
+			//	g.EndOfChkpt();
+			//};
+			//g.LoadChkpt += (loadVSchkpt)delegate(Dictionary<string, position> vs) {
+			//	valueStore = vs;
+			//};
 			g.Join ();
-
 
 			//for (int n = 0; n < 10; n++)
 				//g.OrderedSend (UPDATE);
-			VsyncSystem.WaitForever ();
+			VsyncSystem.WaitForever ();*/
+
+			TcpListener server = new TcpListener (Dns.GetHostEntry("localhost").AddressList[0], 7569);
+			server.Start ();
+			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
+			TcpClient client = server.AcceptTcpClient ();
+			Console.WriteLine ("A Client Connected!");
 
 		}
 	}
