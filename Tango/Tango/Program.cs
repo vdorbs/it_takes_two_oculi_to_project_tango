@@ -49,31 +49,58 @@ namespace Tango
 			bytes = new Byte[512];
 			data = null;
 		}
+
+		private Byte[] decode(){
+			Byte secondbyte = bytes [1];
+			int length = secondbyte & 127;
+			int indexFirstMask = 2;
+			if (length == 126) {
+				indexFirstMask = 4;
+			} else if (length == 127) {
+				indexFirstMask = 10;
+			}
+			Byte[] masks = new Byte[4];
+			Array.Copy (bytes, indexFirstMask, masks, 0, 4);
+			int indexFirstDataByte = indexFirstMask + 4;
+			int datalength = bytes.Length - indexFirstDataByte;
+			Byte[] decoded = new Byte[datalength];
+			int j = 0;
+			for (int i = indexFirstDataByte; i < length; i++) {
+				decoded [j] = (Byte) (bytes[i] ^ masks [j % 4]);
+				j++;
+			}
+			return decoded;
+		}
+
 		public void handle(){
 			Console.WriteLine ("Hi I'm your personal thread");
-			int totalBytesEchoed = 0;
 			NetworkStream stream = client.GetStream();
 			int i;
 			while ((i = stream.Read (bytes, 0, bytes.Length)) != 0) {
 				data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
-				Console.WriteLine("Received: {0}", data);
-				if (new Regex("^GET").IsMatch(data)) {
-					Byte[] response = Encoding.UTF8.GetBytes("HTTP/1.1 101 Switching Protocols" + Environment.NewLine
-						+ "Connection: Upgrade" + Environment.NewLine
-						+ "Upgrade: websocket" + Environment.NewLine
-						+ "Sec-WebSocket-Accept: " + Convert.ToBase64String (
-							SHA1.Create().ComputeHash (
-								Encoding.UTF8.GetBytes (
-									new Regex("Sec-WebSocket-Key: (.*)").Match(data).Groups[1].Value.Trim() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-								)
-							)
-						) + Environment.NewLine
-						+ Environment.NewLine);
+				if (new Regex ("^GET").IsMatch (data)) {
+					Byte[] response = Encoding.UTF8.GetBytes ("HTTP/1.1 101 Switching Protocols" + Environment.NewLine
+					                  + "Connection: Upgrade" + Environment.NewLine
+					                  + "Upgrade: websocket" + Environment.NewLine
+					                  + "Sec-WebSocket-Accept: " + Convert.ToBase64String (
+						                  SHA1.Create ().ComputeHash (
+							                  Encoding.UTF8.GetBytes (
+								                  new Regex ("Sec-WebSocket-Key: (.*)").Match (data).Groups [1].Value.Trim () + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+							                  )
+						                  )
+					                  ) + Environment.NewLine
+					                  + Environment.NewLine);
 
-					stream.Write(response, 0, response.Length);
+					stream.Write (response, 0, response.Length);
+				} else {
+					Byte[] decoded = decode ();
+					//String result = System.Text.Encoding.ASCII.GetString(bytes, 0, decoded.Length);
+					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
+
 			}
 			//client.Close ();
+
 
 		}
 	}
