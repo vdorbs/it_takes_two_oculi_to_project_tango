@@ -5,6 +5,7 @@ using Vsync;
 using System.Net.Sockets;
 using System.Net;
 using System;
+using System.IO;
 
 namespace Tango
 {
@@ -38,8 +39,25 @@ namespace Tango
 	}
 	public class handler
 	{
+		private TcpClient client;
+		private Byte[] bytes;
+		private string data;
+		public handler(TcpClient c){
+			client = c;
+			bytes = new Byte[256];
+			data = null;
+		}
 		public void handle(){
 			Console.WriteLine ("Hi I'm your personal thread");
+			int totalBytesEchoed = 0;
+			NetworkStream stream = client.GetStream();
+			int i;
+			while ((i = stream.Read (bytes, 0, bytes.Length)) != 0) {
+				data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
+				Console.WriteLine("Received: {0}", data);
+			}
+			//client.Close ();
+
 		}
 	}
 	class MainClass
@@ -83,14 +101,17 @@ namespace Tango
 			//for (int n = 0; n < 10; n++)
 				//g.OrderedSend (UPDATE);
 			VsyncSystem.WaitForever ();*/
-			handler h = new handler ();
-			TcpListener server = new TcpListener (Dns.GetHostEntry("localhost").AddressList[0], 7569);
+
+			TcpListener server = new TcpListener (7569);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
-			TcpClient client = server.AcceptTcpClient ();
-			Thread handler = new Thread(new ThreadStart(h.handle));
-			handler.Start ();
-			Console.WriteLine ("A Client Connected!");
+			while (true) {
+				TcpClient client = server.AcceptTcpClient ();
+				handler h = new handler (client);
+				Thread handler = new Thread (new ThreadStart (h.handle));
+				handler.Start ();
+				Console.WriteLine ("A Client Connected!");
+			}
 
 		}
 	}
