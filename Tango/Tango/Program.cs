@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using Vsync;
 using System.Net.Sockets;
 using System.Net;
-using System;
 using System.IO;
+using System.Text.RegularExpressions;
+using System.Text;
+using System.Security.Cryptography;
 
 namespace Tango
 {
@@ -44,7 +46,7 @@ namespace Tango
 		private string data;
 		public handler(TcpClient c){
 			client = c;
-			bytes = new Byte[256];
+			bytes = new Byte[512];
 			data = null;
 		}
 		public void handle(){
@@ -55,6 +57,21 @@ namespace Tango
 			while ((i = stream.Read (bytes, 0, bytes.Length)) != 0) {
 				data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
 				Console.WriteLine("Received: {0}", data);
+				if (new Regex("^GET").IsMatch(data)) {
+					Byte[] response = Encoding.UTF8.GetBytes("HTTP/1.1 101 Switching Protocols" + Environment.NewLine
+						+ "Connection: Upgrade" + Environment.NewLine
+						+ "Upgrade: websocket" + Environment.NewLine
+						+ "Sec-WebSocket-Accept: " + Convert.ToBase64String (
+							SHA1.Create().ComputeHash (
+								Encoding.UTF8.GetBytes (
+									new Regex("Sec-WebSocket-Key: (.*)").Match(data).Groups[1].Value.Trim() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+								)
+							)
+						) + Environment.NewLine
+						+ Environment.NewLine);
+
+					stream.Write(response, 0, response.Length);
+				}
 			}
 			//client.Close ();
 
