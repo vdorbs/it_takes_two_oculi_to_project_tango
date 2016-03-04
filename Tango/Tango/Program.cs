@@ -11,34 +11,24 @@ using System.Security.Cryptography;
 
 namespace Tango
 {
-	public class position
-	{
-		public float pos_x;
-		public float pos_y;
-		public float pos_z;
-		public float rot;
-
-		public position(float x, float y, float z, float r)
-		{
-			pos_x = x; pos_y = y; pos_z = z; rot = r;
-		}
-	}
 
 	public class room
 	{
 		public string room_name;
-		public Dictionary<string, position> playerLocs;
+		public Dictionary<string, string> playerLocs;
 		public List<string> players;
 		//Put anything else in here
 
 		public room (string name)
 		{
 			room_name = name;
-			playerLocs = new Dictionary<string, position> ();
+			playerLocs = new Dictionary<string, string> ();
 			players = new List<string> ();
 		}
 
 	}
+
+
 	public class handler
 	{
 		private TcpClient client;
@@ -138,7 +128,8 @@ namespace Tango
 	{
 		public static void Main (string[] args)
 		{
-			/*Dictionary<string, position> valueStore = new Dictionary<string, position> ();
+			Dictionary<string, string> valueStore = new Dictionary<string, string> ();
+			valueStore ["hey"] = "you!";
 			const int UPDATE = 0;
 			const int LOOKUP = 1;
 			const int REFRESH = 2;
@@ -146,22 +137,22 @@ namespace Tango
 			VsyncSystem.Start ();
 			Console.WriteLine ("VSYNC STARTED");
 
-			Group g = new Group ("dataHolder");
+			Vsync.Group g = new Vsync.Group ("dataHolder");
 			g.ViewHandlers += (ViewHandler)delegate(View v) {
 				VsyncSystem.WriteLine("New View: " + v);
 				Console.Title = "View " + v.viewid + ", my rank=" + v.GetMyRank();
 			};
-			g.Handlers[UPDATE] += (Action<string,float,float,float,float>) delegate(string s, float x, float y, float z, float r) {
+			g.Handlers[UPDATE] += (Action<string,string>) delegate(string username, string val) {
 				VsyncSystem.WriteLine("IN UPDATE");
-				position player_pos = new position(x, y, z, r);
-				valueStore[s] = player_pos;
+				valueStore[username] = val;
 			};
 			g.Handlers[LOOKUP] += (Action<string>)delegate(string s) {
 				VsyncSystem.WriteLine("IN LOOKUP");
 				g.Reply(valueStore[s]);
 			};
 			g.Handlers [REFRESH] += (Action)delegate() {
-				g.Reply(valueStore);
+				string reply = Extensions.FromDictionaryToJson(valueStore);
+				g.Reply(reply);
 			};
 			//g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
 			//	g.SendChkpt(valueStore);
@@ -172,9 +163,14 @@ namespace Tango
 			//};
 			g.Join ();
 
+			List<string> valuesDic = new List<string> ();
+			g.Query (1, REFRESH, new EOLMarker() , valuesDic);
+			Console.WriteLine (valuesDic [0]);
+
+
+
 			//for (int n = 0; n < 10; n++)
 				//g.OrderedSend (UPDATE);
-			VsyncSystem.WaitForever ();*/
 
 			TcpListener server = new TcpListener (7569);
 			server.Start ();
@@ -186,7 +182,6 @@ namespace Tango
 				handler.Start ();
 				Console.WriteLine ("A Client Connected!");
 			}
-
 		}
 	}
 }
