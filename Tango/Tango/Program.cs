@@ -50,6 +50,34 @@ namespace Tango
 			data = null;
 		}
 
+		private Byte[] encode(Byte[] raw){
+			Byte[] formatted;
+			int indexStart = -1;
+			if (raw.Length <= 125) {
+				formatted = new Byte[2 + raw.Length];
+				formatted [1] = (Byte) raw.Length;
+				indexStart = 2;
+			} else if (raw.Length >= 126 && raw.Length <= 65535) {
+				formatted = new Byte[4 + raw.Length];
+				formatted [1] = 126;
+				formatted [2] = (Byte)((raw.Length >> 8) & 255);
+				formatted [3] = (Byte)(raw.Length & 255);
+				indexStart = 4;
+			} else {
+				formatted = new Byte[10 + raw.Length];
+				formatted [1] = 127;
+				int shift = 56;
+				for (int i = 2; i < 10; i++) {
+					formatted [i] = (Byte)((raw.Length >> shift) & 255);
+					shift = shift - 8;
+				}
+				indexStart = 10;
+			}
+
+			formatted [0] = 129;
+			Array.Copy (raw, 0, formatted, indexStart, raw.Length);
+			return formatted;
+		}
 		private Byte[] decode(){
 			Byte secondbyte = bytes [1];
 			int length = secondbyte & 127;
@@ -97,7 +125,9 @@ namespace Tango
 					//String result = System.Text.Encoding.ASCII.GetString(bytes, 0, decoded.Length);
 					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
-
+				Byte[] r = Encoding.UTF8.GetBytes("Hello from the server side");
+				Byte[] resp = encode(r);
+				stream.Write(resp, 0, resp.Length);
 			}
 			//client.Close ();
 
