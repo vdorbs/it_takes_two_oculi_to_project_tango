@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 
 namespace Tango
 {
-
+	//Will be responsible for storing rooms 
 	public class room
 	{
 		public string room_name;
@@ -28,15 +28,18 @@ namespace Tango
 
 	}
 
-
+	//Responsible for handling a single client 
 	public class handler
 	{
-		private TcpClient client;
-		private Byte[] bytes;
-		private string data;
-		private Vsync.Group g;
-		private NetworkStream strm;
-		string ID;
+		private TcpClient client; //A reference to the client this thread is handling
+		private Byte[] bytes; //The current input from the client 
+		private string data; // String representation on bytes
+		private Vsync.Group g; // The Vsync group this server is a member of
+		private NetworkStream strm; //Input Stream for communication
+		string ID; //User ID
+		System.Timers.Timer t; // Thread timer used for sending dictionary
+
+		//Constructor
 		public handler(TcpClient c, Vsync.Group g){
 			client = c;
 			bytes = new Byte[4096];
@@ -44,8 +47,10 @@ namespace Tango
 			this.g = g;
 			strm = null;
 			ID = Path.GetRandomFileName ().Replace (".", "");
+			t = new System.Timers.Timer ();
 		}
 
+		//Encodes data to be sent accross socket connection in JS readible format
 		private Byte[] encode(Byte[] raw){
 			Byte[] formatted;
 			int indexStart = -1;
@@ -74,6 +79,8 @@ namespace Tango
 			Array.Copy (raw, 0, formatted, indexStart, raw.Length);
 			return formatted;
 		}
+
+		//Decodes data sent from JS Socket
 		private Byte[] decode(){
 			Byte secondbyte = bytes [1];
 			int length = secondbyte & 127;
@@ -97,6 +104,7 @@ namespace Tango
 			return decoded;
 		}
 
+		//Sends dictionary accross network stream 
 		public void send_info(Object source, System.Timers.ElapsedEventArgs e) {
 			try{
 				List<string> valuesDic = new List<string> ();
@@ -106,10 +114,12 @@ namespace Tango
 				strm.Write(resp, 0, resp.Length);
 			}
 			catch(Exception err){
+				//Fail Loudly
 				Console.WriteLine(err);
 			}
 		}
 
+		//Parses data recieved from client and updates dictionary
 		public void parseAndPut(Byte[] coord){
 			string c = System.Text.Encoding.UTF8.GetString (coord);
 			Console.WriteLine (c);
@@ -124,16 +134,19 @@ namespace Tango
 				g.OrderedSend (0, key, value); 
 			}
 			catch(Exception e) {
-				Console.WriteLine (e);
+				//Fail Silently 
 			}
 		}
+
+		//The main method callback method responsible for recieving and processing input on a loop
 		public void handle(){
-			//Console.WriteLine ("Hi I'm your personal thread");
 			NetworkStream stream = client.GetStream();
 			this.strm = stream;
 			int i;
+			//Continuously read from the buffer while the connection is open 
 			while ((i = stream.Read (bytes, 0, bytes.Length)) != 0) {
 				data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
+				//First request -> Respond with HTTP Change Protocol Handshake 
 				if (new Regex ("^GET").IsMatch (data)) {
 					Byte[] response = Encoding.UTF8.GetBytes ("HTTP/1.1 101 Switching Protocols" + Environment.NewLine
 					                  + "Connection: Upgrade" + Environment.NewLine
@@ -148,33 +161,36 @@ namespace Tango
 					                  + Environment.NewLine);
 
 					stream.Write (response, 0, response.Length);
-					//this is the user ID
+
+					//Generate and send user ID
 					Byte[] q = Encoding.UTF8.GetBytes(ID);
 					Byte[] resp = encode(q);
 					stream.Write(resp, 0, resp.Length);
-					System.Timers.Timer t = new System.Timers.Timer ();
+
+					//Start the timer and send dictionary
 					t.Elapsed += send_info;
 					t.Interval = 100;
 					t.Start ();
 
 				} else {
+					//decode input and put into dictionary if valid location data
 					Byte[] decoded = decode ();
-					//String result = System.Text.Encod
-					//Encoding.ASCII.GetString(bytes, 0, decoded.Length);
 					parseAndPut(decoded);
 					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
 			}
+			//Stop timer, remove user, close connection
+			Console.WriteLine ("Exiting While");
+			t.Stop ();
 			g.OrderedSend (3, ID);
-			//client.Close ();
-
-
+			client.Close ();
 		}
 	}
 	class MainClass
 	{
 		public static void Main (string[] args)
 		{
+			//Set up vsync dictionary and handlers
 			Dictionary<string, string> valueStore = new Dictionary<string, string> ();
 			valueStore ["user1"] = "0,1,0,1,1,2";
 			valueStore ["user2"] = "1,1,1,1,1,1";
@@ -204,32 +220,33 @@ namespace Tango
 				g.Reply(reply);
 			};
 			g.Handlers [REMOVE] += (Action<string>)delegate(string s) {
+				VsyncSystem.WriteLine("DELETING USER " + s);
 				valueStore.Remove(s);
 			};
-			//g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
-			//	g.SendChkpt(valueStore);
-			//	g.EndOfChkpt();
-			//};
-			//g.LoadChkpt += (loadVSchkpt)delegate(Dictionary<string, position> vs) {
-			//	valueStore = vs;
-			//};
+			/*g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
+				g.SendChkpt(valueStore);
+				g.EndOfChkpt();
+			};
+			g.LoadChkpt += (loadVSchkpt)delegate(Dictionary<string, position> vs) {
+			valueStore = vs;
+			}; */
 			g.Join ();
 
+			//Quick visual check to make sure initialization goes smoothely
+			//UNNECESSARY -> TAKE OUT LATER
 			List<string> valuesDic = new List<string> ();
 			g.Query (1, REFRESH, new EOLMarker() , valuesDic);
 			Console.WriteLine (valuesDic [0]);
 
-
-
-			//for (int n = 0; n < 10; n++)
-				//g.OrderedSend (UPDATE);
-
+			//Set up TCP Listener
 			TcpListener server = new TcpListener (7569);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
+			//Listen for connections
 			while (true) {
 				TcpClient client = server.AcceptTcpClient ();
 				handler h = new handler (client, g);
+				//Spin off new thread to handle clients as they arrive 
 				Thread handler = new Thread (new ThreadStart (h.handle));
 				handler.Start ();
 				Console.WriteLine ("A Client Connected!");
