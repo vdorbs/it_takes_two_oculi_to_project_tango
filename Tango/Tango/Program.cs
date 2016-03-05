@@ -138,13 +138,21 @@ namespace Tango
 			}
 		}
 
+		public int checkRead(Stream s){
+			try{
+				return s.Read(bytes, 0, bytes.Length);
+			}
+			catch (Exception e){
+				return 0;
+			}
+		}
 		//The main method callback method responsible for recieving and processing input on a loop
 		public void handle(){
 			NetworkStream stream = client.GetStream();
 			this.strm = stream;
-			int i;
+			int i = checkRead(strm);
 			//Continuously read from the buffer while the connection is open 
-			while ((i = stream.Read (bytes, 0, bytes.Length)) != 0) {
+			while (i != 0) {
 				data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
 				//First request -> Respond with HTTP Change Protocol Handshake 
 				if (new Regex ("^GET").IsMatch (data)) {
@@ -171,11 +179,13 @@ namespace Tango
 					t.Elapsed += send_info;
 					t.Interval = 100;
 					t.Start ();
+					i = checkRead(strm);
 
 				} else {
 					//decode input and put into dictionary if valid location data
 					Byte[] decoded = decode ();
 					parseAndPut(decoded);
+					i = checkRead(strm);
 					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
 			}
