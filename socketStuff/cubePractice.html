@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>Cube Demo</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body onclick="updateLocations()">
+		<script src="three.min.js"></script>
+		<script src="three.js-master/src/math/Math.js"></script>
+		<script src="java_socket_bridge.js"></script>
+		<script src="string.js"></script>
+		<script src="sendData.js"></script>
+		<script>
+			var id = null;
+			//var socket = new WebSocket("ws://10.148.6.9:7569");
+			//socket.onmessage = function(dat){
+			//	console.log(dat.data);
+			//};
+			//socket.onopen = function(){
+			//	console.log("Socket's open");
+			//};
+			//socket.onclose = function(){
+			//	console.log("Socket's closed");
+			//};
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+			var renderer = new THREE.WebGLRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+
+			//var texture = new THREE.TextureLoader().load('0.png');
+			var texture = new THREE.TextureLoader().load('0.png');
+//			var material = new THREE.MeshBasicMaterial( {map: texture });
+			//var material = new THREE.MeshDepthMaterial( { color: 0xffff00 } );
+			var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+			var geometry = new THREE.BoxGeometry( 1,1,1 );
+
+			function createCube (quaternion, translation){
+				var vector = new THREE.Vector3(1,0,0);
+				vector.applyQuaternion(quaternion);
+				var mesh = new THREE.Mesh( geometry, material );
+				mesh.position.x = translation.x;
+				mesh.position.y = translation.y;
+				mesh.position.z = translation.z;
+				mesh.rotation.x = vector.x;
+				mesh.rotation.y = vector.y;
+				mesh.rotation.z = vector.z;
+				mesh.dynamic = true
+				return mesh;
+			}
+
+ 			var cubeList = [];
+
+			cubeList.push(createCube(new THREE.Quaternion(0,1,1,0), {x:5,y:1,z:1}));
+
+			for(i=0; i < cubeList.length; i++){
+				scene.add(cubeList[i]);
+			}
+
+			camera.position.z = 20;
+
+			function updateLocations(){
+				var newX, newY, newZ, newQXr, newYr, newZr;
+				//for(i=0; i<cubeList.length; i++){
+					//mesh = cubeList[i];
+					//mesh.position.x = THREE.Math.randInt(-10,10);
+					//mesh.position.y = THREE.Math.randInt(-10,10);
+					//mesh.position.z = THREE.Math.randInt(-10,10);
+					//mesh.rotation.x = THREE.Math.randInt(-10,10);
+					//mesh.rotation.y = THREE.Math.randInt(-10,10);
+					//mesh.rotation.z = THREE.Math.randInt(-10,10);
+				//}
+				sendData({x:3,y:4,z:5}, new THREE.Quaternion(0,1,0,0));
+			}
+			function render() {
+				requestAnimationFrame( render );
+				renderer.render(scene, camera);
+			}
+			render();
+
+		</script>
+	</body>
+</html>
