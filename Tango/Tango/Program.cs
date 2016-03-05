@@ -34,10 +34,16 @@ namespace Tango
 		private TcpClient client;
 		private Byte[] bytes;
 		private string data;
-		public handler(TcpClient c){
+		private Vsync.Group g;
+		private NetworkStream strm;
+		string ID;
+		public handler(TcpClient c, Vsync.Group g){
 			client = c;
-			bytes = new Byte[512];
+			bytes = new Byte[4096];
 			data = null;
+			this.g = g;
+			strm = null;
+			ID = Path.GetRandomFileName ().Replace (".", "");
 		}
 
 		private Byte[] encode(Byte[] raw){
@@ -83,16 +89,48 @@ namespace Tango
 			int datalength = bytes.Length - indexFirstDataByte;
 			Byte[] decoded = new Byte[datalength];
 			int j = 0;
-			for (int i = indexFirstDataByte; i < length; i++) {
+			for (int i = indexFirstDataByte;
+				i < length + 6; i++) {
 				decoded [j] = (Byte) (bytes[i] ^ masks [j % 4]);
 				j++;
 			}
 			return decoded;
 		}
 
+		public void send_info(Object source, System.Timers.ElapsedEventArgs e) {
+			try{
+				List<string> valuesDic = new List<string> ();
+				g.Query (1, 2, new EOLMarker() , valuesDic);
+				Byte[] r = Encoding.UTF8.GetBytes(valuesDic [0]);
+				Byte[] resp = encode(r);
+				strm.Write(resp, 0, resp.Length);
+			}
+			catch(Exception err){
+				Console.WriteLine(err);
+			}
+		}
+
+		public void parseAndPut(Byte[] coord){
+			string c = System.Text.Encoding.UTF8.GetString (coord);
+			Console.WriteLine (c);
+			c = c.Replace("{", String.Empty).Replace("\"", String.Empty).Replace("}", String.Empty);
+			Console.WriteLine (c);
+			String[] parts = c.Split (':');
+			try {
+				String key = parts [0].Trim();
+				String value = parts [1].Trim();
+				Console.WriteLine (key);
+				Console.WriteLine (value);
+				g.OrderedSend (0, key, value); 
+			}
+			catch(Exception e) {
+				Console.WriteLine (e);
+			}
+		}
 		public void handle(){
-			Console.WriteLine ("Hi I'm your personal thread");
+			//Console.WriteLine ("Hi I'm your personal thread");
 			NetworkStream stream = client.GetStream();
+			this.strm = stream;
 			int i;
 			while ((i = stream.Read (bytes, 0, bytes.Length)) != 0) {
 				data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
@@ -110,15 +148,24 @@ namespace Tango
 					                  + Environment.NewLine);
 
 					stream.Write (response, 0, response.Length);
+					//this is the user ID
+					Byte[] q = Encoding.UTF8.GetBytes(ID);
+					Byte[] resp = encode(q);
+					stream.Write(resp, 0, resp.Length);
+					System.Timers.Timer t = new System.Timers.Timer ();
+					t.Elapsed += send_info;
+					t.Interval = 100;
+					t.Start ();
+
 				} else {
 					Byte[] decoded = decode ();
-					//String result = System.Text.Encoding.ASCII.GetString(bytes, 0, decoded.Length);
+					//String result = System.Text.Encod
+					//Encoding.ASCII.GetString(bytes, 0, decoded.Length);
+					parseAndPut(decoded);
 					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
-				Byte[] r = Encoding.UTF8.GetBytes("Hello from the server side");
-				Byte[] resp = encode(r);
-				stream.Write(resp, 0, resp.Length);
 			}
+			g.OrderedSend (3, ID);
 			//client.Close ();
 
 
@@ -129,10 +176,12 @@ namespace Tango
 		public static void Main (string[] args)
 		{
 			Dictionary<string, string> valueStore = new Dictionary<string, string> ();
-			valueStore ["hey"] = "you!";
+			valueStore ["user1"] = "0,1,0,1,1,2";
+			valueStore ["user2"] = "1,1,1,1,1,1";
 			const int UPDATE = 0;
 			const int LOOKUP = 1;
 			const int REFRESH = 2;
+			const int REMOVE = 3;
 			Console.WriteLine ("Hello World!");
 			VsyncSystem.Start ();
 			Console.WriteLine ("VSYNC STARTED");
@@ -153,6 +202,9 @@ namespace Tango
 			g.Handlers [REFRESH] += (Action)delegate() {
 				string reply = Extensions.FromDictionaryToJson(valueStore);
 				g.Reply(reply);
+			};
+			g.Handlers [REMOVE] += (Action<string>)delegate(string s) {
+				valueStore.Remove(s);
 			};
 			//g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
 			//	g.SendChkpt(valueStore);
@@ -177,7 +229,7 @@ namespace Tango
 			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
 			while (true) {
 				TcpClient client = server.AcceptTcpClient ();
-				handler h = new handler (client);
+				handler h = new handler (client, g);
 				Thread handler = new Thread (new ThreadStart (h.handle));
 				handler.Start ();
 				Console.WriteLine ("A Client Connected!");

@@ -5,7 +5,7 @@
 import socket
 import sys
 
-TCP_IP = "localhost"
+TCP_IP = "10.148.4.124"
 TCP_PORT = 7569
 
 BUFFER_SIZE = 1024
