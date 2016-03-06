@@ -177,7 +177,7 @@ namespace Tango
 
 					//Start the timer and send dictionary
 					t.Elapsed += send_info;
-					t.Interval = 100;
+					t.Interval = 16;
 					t.Start ();
 					i = checkRead(strm);
 
