@@ -144,7 +144,7 @@ namespace Tango
 					i = Helpers.Connections.checkRead(stream, bytes);
 					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
-			}
+			} 
 
 
 			/*//Gets VSYNC SET UP
