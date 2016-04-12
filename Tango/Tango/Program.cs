@@ -38,8 +38,8 @@ namespace Tango
 		public const int LOOKUP = 1;
 		public const int REFRESH = 2;
 		public const int REMOVE = 3;
-		private static ArrayList roomList;
 		public static Room currentRoom;
+		private static NetworkStream stream;
 
 
 		public static Vsync.Group createRoomGroup (string name) {
@@ -85,25 +85,50 @@ namespace Tango
 			return false;
 		}
 
+		public static void send_info(Object source, System.Timers.ElapsedEventArgs e) {
+			try{
+				string info = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+				Byte[] r = Encoding.UTF8.GetBytes(info);
+				Byte[] resp = Helpers.Connections.encode(r);
+				stream.Write(resp, 0, resp.Length);
+				Console.WriteLine("SENDING DATA");
+			}
+			catch(Exception err){
+				//Fail Loudly
+				Console.WriteLine(err);
+			}
+		}
+
 		public static void Main (string[] args)
 		{
-			roomList = new ArrayList ();
 			currentRoom = new Room ("NO ROOM");
-
+			String ID = Path.GetRandomFileName ().Replace (".", "");
+			Console.WriteLine ("ID IS " + ID);
 
 			//Set up TCP Listener
 			TcpListener server = new TcpListener (7569);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
 			TcpClient client = server.AcceptTcpClient ();
-			NetworkStream stream = client.GetStream();
+			stream = client.GetStream();
+			Console.WriteLine ("Matched with a client! Now Starting VSYNC");
 
-			Console.WriteLine ("Matched with a client!");
+			VsyncSystem.Start ();
+			Console.WriteLine ("VSYNC STARTED");
+			String groupName = "TEST ROOM";
+
+			Vsync.Group roomGroup = createRoomGroup (groupName);
+			roomGroup.Join ();
+			Console.WriteLine ("Room Group Joined");
+			Console.WriteLine (groupName);
+
+			System.Timers.Timer t = new System.Timers.Timer ();
+			t.Elapsed += send_info;
+			t.Interval = 100;
+			t.Start ();
 
 			Byte[] bytes = new Byte[4096];
 			String data = null;
-			String ID = Path.GetRandomFileName ().Replace (".", "");
-			Console.WriteLine ("ID IS " + ID);
 
 			int i = Helpers.Connections.checkRead(stream, bytes);
 			//Continuously read from the buffer while the connection is open 
@@ -141,40 +166,15 @@ namespace Tango
 					Console.WriteLine ("RECEIVED MESSAGE " + s);
 					String response = Helpers.Connections.parseAndPut(decoded);
 					Console.WriteLine ("Received these coordinates" + response);
+					roomGroup.OrderedSend (0, ID, response); 
 					i = Helpers.Connections.checkRead(stream, bytes);
 					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
-			} 
+			}
 
-
-			/*//Gets VSYNC SET UP
-			//Set up the main group that everyone joins
-			VsyncSystem.Start();
-			Console.WriteLine ("VSYNC STARTED");
-			Vsync.Group mainGroup = new Vsync.Group ("Main");
-			mainGroup.ViewHandlers += (ViewHandler)delegate(View v) {
-				VsyncSystem.WriteLine("New View: " + v);
-				Console.Title = "Main Group View " + v.viewid + ", my rank=" + v.GetMyRank();
-			};
-			mainGroup.Join ();
-			Console.WriteLine ("JOINED MAIN GROUP");
-
-			String groupName = "newRoom3";
-
-			Vsync.Group roomGroup = createRoomGroup (groupName);
-			roomGroup.Join ();
-			Console.WriteLine ("Room Group Joined");
-			Console.WriteLine (groupName);
-
-			//Set timer and always send messages when the timer goes off
-			System.Timers.Timer t;
-
-			//Keep checking for more input from the client
-			while (true) {
-				int i = 5;
-				i = i + 1;
-				i = i - 1;
-			}*/
+			Console.WriteLine ("Reached end of input");
+			t.Stop ();
+			client.Close ();
 
 			//Quick visual check to make sure initialization goes smoothely
 			//UNNECESSARY -> TAKE OUT LATER
