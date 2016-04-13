@@ -1,9 +1,0 @@
-Vsync V2.2 Revision 2032: 3/2/2016 12:24:15 AM (12:27:19.5412495) ; Compiled for MONO; <: 192.168.0.22>
-Major Vsync Runtime Settings: ORACLESIZE = 3; 
-P2P/ACK port numbers = {9753/9754}; IPMC base portno = 11002
-IPMC address range = {224.0.19.136-224.7.180.168}, MAXIPMCADDRS in use = 25
----------------------------------------------------------------------------------------------
-... MyAddress = (5140)
-Vsync: Searching for the Vsync ORACLE...
-Vsync: Found the Vsync.ORACLE service, attempting to connect.VSYNC process-id: 5140, my_address = (5140)
-New View: View[gname=<dataHolder>, gaddr=(0:224.0.104.60/0:0), viewid=2;  3 members={ [(5028)(5093)(5140)]}, nextIn={  <2:0> 2:0 2:0 2:0 }, minStable=-1 (last sent -1), StableTo={ ** 0 0 0 }, joining={ [(5140)]}, leaving={ []}, IamLeader = False
