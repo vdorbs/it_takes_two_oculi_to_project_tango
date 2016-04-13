@@ -1,5 +1,5 @@
-/Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Server/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
-/Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Server/bin/Debug/Server.exe.mdb
-/Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Server/bin/Debug/Server.exe
-/Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Server/obj/x86/Debug/Server.exe
-/Users/jaredexter/junior year/cs5412/it_takes_two_oculi_to_project_tango/Tango/Server/obj/x86/Debug/Server.exe.mdb
+/Users/MaddieCripps/it_takes_two_oculi_to_project_tango/Tango/Server/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
+/Users/MaddieCripps/it_takes_two_oculi_to_project_tango/Tango/Server/bin/Debug/Server.exe.mdb
+/Users/MaddieCripps/it_takes_two_oculi_to_project_tango/Tango/Server/bin/Debug/Server.exe
+/Users/MaddieCripps/it_takes_two_oculi_to_project_tango/Tango/Server/obj/x86/Debug/Server.exe
+/Users/MaddieCripps/it_takes_two_oculi_to_project_tango/Tango/Server/obj/x86/Debug/Server.exe.mdb
