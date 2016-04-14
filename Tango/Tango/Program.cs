@@ -49,11 +49,11 @@ namespace Tango
 				Console.Title = "View " + v.viewid + ", my rank=" + v.GetMyRank();
 			};
 			roomGroup.Handlers[UPDATE] += (Action<string,string>) delegate(string username, string val) {
-				VsyncSystem.WriteLine("IN UPDATE");
+				//VsyncSystem.WriteLine("IN UPDATE");
 				currentRoom.playerLocs[username] = val;
 			};
 			roomGroup.Handlers[LOOKUP] += (Action<string>)delegate(string s) {
-				VsyncSystem.WriteLine("IN LOOKUP");
+				//VsyncSystem.WriteLine("IN LOOKUP");
 				roomGroup.Reply(currentRoom.playerLocs[s]);
 			};
 			roomGroup.Handlers [REFRESH] += (Action)delegate() {
@@ -61,7 +61,7 @@ namespace Tango
 				roomGroup.Reply(reply);
 			};
 			roomGroup.Handlers [REMOVE] += (Action<string>)delegate(string s) {
-				VsyncSystem.WriteLine("DELETING USER " + s);
+				//VsyncSystem.WriteLine("DELETING USER " + s);
 				currentRoom.playerLocs.Remove(s);
 			};
 			/*g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
@@ -91,7 +91,6 @@ namespace Tango
 				Byte[] r = Encoding.UTF8.GetBytes(info);
 				Byte[] resp = Helpers.Connections.encode(r);
 				stream.Write(resp, 0, resp.Length);
-				Console.WriteLine("SENDING DATA");
 			}
 			catch(Exception err){
 				//Fail Loudly
@@ -101,6 +100,24 @@ namespace Tango
 
 		public static void Main (string[] args)
 		{
+			if (args.Length < 2) {
+				Console.WriteLine ("There are less than 2 args given.  This is fine for now, but in the future we need to give the room name.");
+			} 
+			else {
+				String roomname = args[1];
+				int max_port = 65000;
+				int min_port = 15000;
+				int port_diff = max_port - min_port;
+				int room_hash = roomname.GetHashCode();
+				room_hash = room_hash % port_diff;
+				room_hash = room_hash + port_diff;
+				room_hash = room_hash % port_diff;
+				Console.WriteLine ("Mod is " + room_hash);
+				room_hash += min_port;
+				Vsync.Vsync.VSYNC_GROUPPORT = room_hash;
+				Console.WriteLine ("VSYNC PORT NO IS " + room_hash);
+			}
+				
 			currentRoom = new Room ("NO ROOM");
 			String ID = Path.GetRandomFileName ().Replace (".", "");
 			Console.WriteLine ("ID IS " + ID);
@@ -115,14 +132,14 @@ namespace Tango
 			stream = client.GetStream();
 			Console.WriteLine ("Matched with a client! Now Starting VSYNC");
 
-			VsyncSystem.Start ();
+			/*VsyncSystem.Start ();
 			Console.WriteLine ("VSYNC STARTED");
 			String groupName = "TEST ROOM";
 
 			Vsync.Group roomGroup = createRoomGroup (groupName);
 			roomGroup.Join ();
 			Console.WriteLine ("Room Group Joined");
-			Console.WriteLine (groupName);
+			Console.WriteLine (groupName);*/
 
 			System.Timers.Timer t = new System.Timers.Timer ();
 			t.Elapsed += send_info;
@@ -164,13 +181,13 @@ namespace Tango
 				}  else {
 					//decode input and put into dictionary if valid location data
 					Byte[] decoded = Helpers.Connections.decode (bytes);
-					string s = System.Text.Encoding.UTF8.GetString(decoded, 0, decoded.Length);
-					Console.WriteLine ("RECEIVED MESSAGE " + s);
+					//string s = System.Text.Encoding.UTF8.GetString(decoded, 0, decoded.Length);
+					//Console.WriteLine ("RECEIVED MESSAGE " + s);
 					String response = Helpers.Connections.parseAndPut(decoded);
-					Console.WriteLine ("Received these coordinates" + response);
+					//Console.WriteLine ("Received these coordinates" + response);
 					roomGroup.OrderedSend (0, ID, response); 
 					i = Helpers.Connections.checkRead(stream, bytes);
-					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
+					//Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
 			}
 
