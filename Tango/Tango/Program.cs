@@ -50,19 +50,27 @@ namespace Tango
 			};
 			roomGroup.Handlers[UPDATE] += (Action<string,string>) delegate(string username, string val) {
 				//VsyncSystem.WriteLine("IN UPDATE");
-				currentRoom.playerLocs[username] = val;
+				lock (currentRoom) {
+					currentRoom.playerLocs[username] = val;
+				}
 			};
 			roomGroup.Handlers[LOOKUP] += (Action<string>)delegate(string s) {
 				//VsyncSystem.WriteLine("IN LOOKUP");
-				roomGroup.Reply(currentRoom.playerLocs[s]);
+				lock (currentRoom) {
+					roomGroup.Reply(currentRoom.playerLocs[s]);
+				}
 			};
 			roomGroup.Handlers [REFRESH] += (Action)delegate() {
-				string reply = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
-				roomGroup.Reply(reply);
+				lock (currentRoom) {
+					string reply = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+					roomGroup.Reply(reply);
+				}
 			};
 			roomGroup.Handlers [REMOVE] += (Action<string>)delegate(string s) {
 				//VsyncSystem.WriteLine("DELETING USER " + s);
-				currentRoom.playerLocs.Remove(s);
+				lock (currentRoom) {
+					currentRoom.playerLocs.Remove(s);
+				}
 			};
 			/*g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
 				g.SendChkpt(valueStore);
@@ -87,7 +95,10 @@ namespace Tango
 
 		public static void send_info(Object source, System.Timers.ElapsedEventArgs e) {
 			try{
-				string info = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+				string info;
+				lock (currentRoom) {
+					info = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+				}
 				Byte[] r = Encoding.UTF8.GetBytes(info);
 				Byte[] resp = Helpers.Connections.encode(r);
 				stream.Write(resp, 0, resp.Length);
@@ -100,11 +111,13 @@ namespace Tango
 
 		public static void Main (string[] args)
 		{
+			String roomname = "no roomname given";
+			Console.WriteLine ("THE SIZE OF ARGS IS " + args.Length);
 			if (args.Length < 2) {
 				Console.WriteLine ("There are less than 2 args given.  This is fine for now, but in the future we need to give the room name.");
 			} 
 			else {
-				String roomname = args[1];
+				roomname = args[1];
 				int max_port = 65000;
 				int min_port = 15000;
 				int port_diff = max_port - min_port;
@@ -118,9 +131,9 @@ namespace Tango
 				Console.WriteLine ("VSYNC PORT NO IS " + room_hash);
 			}
 				
-			currentRoom = new Room ("NO ROOM");
+			currentRoom = new Room (roomname);
 			String ID = Path.GetRandomFileName ().Replace (".", "");
-			Console.WriteLine ("ID IS " + ID);
+			Console.WriteLine ("User ID IS " + ID);
 
 			//Set up TCP Listener
 			Console.WriteLine(args[0]);
@@ -132,18 +145,18 @@ namespace Tango
 			stream = client.GetStream();
 			Console.WriteLine ("Matched with a client! Now Starting VSYNC");
 
-			/*VsyncSystem.Start ();
+			VsyncSystem.Start ();
 			Console.WriteLine ("VSYNC STARTED");
 			String groupName = "TEST ROOM";
 
 			Vsync.Group roomGroup = createRoomGroup (groupName);
 			roomGroup.Join ();
 			Console.WriteLine ("Room Group Joined");
-			Console.WriteLine (groupName);*/
+			Console.WriteLine (groupName);
 
 			System.Timers.Timer t = new System.Timers.Timer ();
 			t.Elapsed += send_info;
-			t.Interval = 100;
+			t.Interval = 50;
 			t.Start ();
 
 			Byte[] bytes = new Byte[4096];
