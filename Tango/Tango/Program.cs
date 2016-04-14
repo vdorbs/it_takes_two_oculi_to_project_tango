@@ -106,9 +106,11 @@ namespace Tango
 			Console.WriteLine ("ID IS " + ID);
 
 			//Set up TCP Listener
-			TcpListener server = new TcpListener (7569);
+			Console.WriteLine(args[0]);
+			int port = Int32.Parse (args [0]);
+			TcpListener server = new TcpListener (port);
 			server.Start ();
-			Console.WriteLine("Server has started on 127.0.0.1:7569.{0}Waiting for a connection...", Environment.NewLine);
+			Console.WriteLine("Server has started on 127.0.0.1:{0}.\nWaiting for a connection...", port);
 			TcpClient client = server.AcceptTcpClient ();
 			stream = client.GetStream();
 			Console.WriteLine ("Matched with a client! Now Starting VSYNC");
