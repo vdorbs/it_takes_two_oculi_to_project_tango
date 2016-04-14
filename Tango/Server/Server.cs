@@ -65,7 +65,7 @@ namespace Server
 				Process proc = new Process {
 					StartInfo = new ProcessStartInfo {
 						FileName = "/bin/bash",
-						Arguments = "../launchServer.sh " + counter.ToString() + " " + r,
+						Arguments = "../launchServer.sh " + counter.ToString() + " " + room,
 						UseShellExecute = true,
 						RedirectStandardOutput = false
 					}
