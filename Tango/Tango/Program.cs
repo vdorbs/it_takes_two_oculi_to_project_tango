@@ -37,7 +37,9 @@ namespace Tango
 		public const int UPDATE = 0;
 		public const int LOOKUP = 1;
 		public const int REFRESH = 2;
-		public const int REMOVE = 3;
+		public const int LEAVE_ROOM = 3;
+		public const int JOIN_ROOM = 4;
+		public const int MAX_IN_ROOM = 5;
 		public static Room currentRoom;
 		private static NetworkStream stream;
 
@@ -66,18 +68,22 @@ namespace Tango
 					roomGroup.Reply(reply);
 				}
 			};
-			roomGroup.Handlers [REMOVE] += (Action<string>)delegate(string s) {
-				//VsyncSystem.WriteLine("DELETING USER " + s);
+			roomGroup.Handlers [JOIN_ROOM] += (Action<string>)delegate(string username) {
+				lock (currentRoom) {
+					if (currentRoom.players.Count >= MAX_IN_ROOM) {
+						roomGroup.Reply("FULL");
+					}
+					else {
+						currentRoom.players.Add(username);
+						roomGroup.Reply("JOINED");
+					}
+				}
+			};
+			roomGroup.Handlers [LEAVE_ROOM] += (Action<string>)delegate(string s) {
 				lock (currentRoom) {
 					currentRoom.playerLocs.Remove(s);
 				}
 			};
-			/*g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
-				g.SendChkpt(valueStore);
-				g.EndOfChkpt();
-			};
-			g.LoadChkpt += (loadVSchkpt)delegate(Dictionary<string, position> vs) {
-			valueStore = vs;*/
 			return roomGroup;
 		}
 
@@ -154,6 +160,23 @@ namespace Tango
 			Console.WriteLine ("Room Group Joined");
 			Console.WriteLine (groupName);
 
+			List<String> results = new List<String> ();
+			roomGroup.OrderedQuery(Vsync.Group.ALL, JOIN_ROOM, ID, new Vsync.EOLMarker(), results); 
+			Boolean full = false;
+			for (int j = 0; j < results.Count; j++) {
+				if (results [j].Equals ("FULL")) {
+					Console.WriteLine ("FULL");
+					full = true;
+				}
+			}
+			if (full) {
+				roomGroup.OrderedSend (LEAVE_ROOM, ID);
+				Byte[] r = Encoding.UTF8.GetBytes("ROOM FULL");
+				Byte[] resp = Helpers.Connections.encode(r);
+				stream.Write(resp, 0, resp.Length);
+				return;
+			}
+								
 			System.Timers.Timer t = new System.Timers.Timer ();
 			t.Elapsed += send_info;
 			t.Interval = 50;
@@ -198,7 +221,11 @@ namespace Tango
 					//Console.WriteLine ("RECEIVED MESSAGE " + s);
 					String response = Helpers.Connections.parseAndPut(decoded);
 					//Console.WriteLine ("Received these coordinates" + response);
-					roomGroup.OrderedSend (0, ID, response); 
+					if (response == null) {
+						Console.WriteLine ("NULL STUFF RECEIVED");
+					} else {
+						roomGroup.OrderedSend (UPDATE, ID, response); 
+					}
 					i = Helpers.Connections.checkRead(stream, bytes);
 					//Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
@@ -207,12 +234,7 @@ namespace Tango
 			Console.WriteLine ("Reached end of input");
 			t.Stop ();
 			client.Close ();
-
-			//Quick visual check to make sure initialization goes smoothely
-			//UNNECESSARY -> TAKE OUT LATER
-			/*List<string> valuesDic = new List<string> ();
-			g.Query (1, REFRESH, new EOLMarker() , valuesDic);
-			Console.WriteLine (valuesDic [0]);*/
+		
 		}
 	}
 }
