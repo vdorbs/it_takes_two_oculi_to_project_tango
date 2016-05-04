@@ -69,7 +69,7 @@ namespace Helpers
 			try{
 				return s.Read(bytes, 0, bytes.Length);
 			}
-			catch (Exception e){
+			catch (Exception){
 				return 0;
 			}
 		}
@@ -77,19 +77,19 @@ namespace Helpers
 		//Parses data recieved from client and updates dictionary
 		public static String parseAndPut(Byte[] coord){
 			string c = System.Text.Encoding.UTF8.GetString (coord);
-			Console.WriteLine (c);
+			//Console.WriteLine (c);
 			c = c.Replace("{", String.Empty).Replace("\"", String.Empty).Replace("}", String.Empty);
-			Console.WriteLine (c);
+			//Console.WriteLine (c);
 			String[] parts = c.Split (':');
 			try {
-				String key = parts [0].Trim();
+				//String key = parts [0].Trim();
 				String value = parts [1].Trim();
-				Console.WriteLine (key);
-				Console.WriteLine (value);
+				//Console.WriteLine (key);
+				//Console.WriteLine (value);
 				//g.OrderedSend (0, key, value); 
 				return value;
 			}
-			catch(Exception e) {
+			catch(Exception) {
 				//Fail Silently 
 			}
 			return null;

@@ -37,7 +37,9 @@ namespace Tango
 		public const int UPDATE = 0;
 		public const int LOOKUP = 1;
 		public const int REFRESH = 2;
-		public const int REMOVE = 3;
+		public const int LEAVE_ROOM = 3;
+		public const int JOIN_ROOM = 4;
+		public const int MAX_IN_ROOM = 5;
 		public static Room currentRoom;
 		private static NetworkStream stream;
 
@@ -49,27 +51,39 @@ namespace Tango
 				Console.Title = "View " + v.viewid + ", my rank=" + v.GetMyRank();
 			};
 			roomGroup.Handlers[UPDATE] += (Action<string,string>) delegate(string username, string val) {
-				VsyncSystem.WriteLine("IN UPDATE");
-				currentRoom.playerLocs[username] = val;
+				//VsyncSystem.WriteLine("IN UPDATE");
+				lock (currentRoom) {
+					currentRoom.playerLocs[username] = val;
+				}
 			};
 			roomGroup.Handlers[LOOKUP] += (Action<string>)delegate(string s) {
-				VsyncSystem.WriteLine("IN LOOKUP");
-				roomGroup.Reply(currentRoom.playerLocs[s]);
+				//VsyncSystem.WriteLine("IN LOOKUP");
+				lock (currentRoom) {
+					roomGroup.Reply(currentRoom.playerLocs[s]);
+				}
 			};
 			roomGroup.Handlers [REFRESH] += (Action)delegate() {
-				string reply = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
-				roomGroup.Reply(reply);
+				lock (currentRoom) {
+					string reply = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+					roomGroup.Reply(reply);
+				}
 			};
-			roomGroup.Handlers [REMOVE] += (Action<string>)delegate(string s) {
-				VsyncSystem.WriteLine("DELETING USER " + s);
-				currentRoom.playerLocs.Remove(s);
+			roomGroup.Handlers [JOIN_ROOM] += (Action<string>)delegate(string username) {
+				lock (currentRoom) {
+					if (currentRoom.players.Count >= MAX_IN_ROOM) {
+						roomGroup.Reply("FULL");
+					}
+					else {
+						currentRoom.players.Add(username);
+						roomGroup.Reply("JOINED");
+					}
+				}
 			};
-			/*g.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv) {
-				g.SendChkpt(valueStore);
-				g.EndOfChkpt();
+			roomGroup.Handlers [LEAVE_ROOM] += (Action<string>)delegate(string s) {
+				lock (currentRoom) {
+					currentRoom.playerLocs.Remove(s);
+				}
 			};
-			g.LoadChkpt += (loadVSchkpt)delegate(Dictionary<string, position> vs) {
-			valueStore = vs;*/
 			return roomGroup;
 		}
 
@@ -87,11 +101,13 @@ namespace Tango
 
 		public static void send_info(Object source, System.Timers.ElapsedEventArgs e) {
 			try{
-				string info = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+				string info;
+				lock (currentRoom) {
+					info = Extensions.FromDictionaryToJson(currentRoom.playerLocs);
+				}
 				Byte[] r = Encoding.UTF8.GetBytes(info);
 				Byte[] resp = Helpers.Connections.encode(r);
 				stream.Write(resp, 0, resp.Length);
-				Console.WriteLine("SENDING DATA");
 			}
 			catch(Exception err){
 				//Fail Loudly
@@ -101,9 +117,29 @@ namespace Tango
 
 		public static void Main (string[] args)
 		{
-			currentRoom = new Room ("NO ROOM");
+			String roomname = "no roomname given";
+			Console.WriteLine ("THE SIZE OF ARGS IS " + args.Length);
+			if (args.Length < 2) {
+				Console.WriteLine ("There are less than 2 args given.  This is fine for now, but in the future we need to give the room name.");
+			} 
+			else {
+				roomname = args[1];
+				int max_port = 65000;
+				int min_port = 15000;
+				int port_diff = max_port - min_port;
+				int room_hash = roomname.GetHashCode();
+				room_hash = room_hash % port_diff;
+				room_hash = room_hash + port_diff;
+				room_hash = room_hash % port_diff;
+				Console.WriteLine ("Mod is " + room_hash);
+				room_hash += min_port;
+				Vsync.Vsync.VSYNC_GROUPPORT = room_hash;
+				Console.WriteLine ("VSYNC PORT NO IS " + room_hash);
+			}
+				
+			currentRoom = new Room (roomname);
 			String ID = Path.GetRandomFileName ().Replace (".", "");
-			Console.WriteLine ("ID IS " + ID);
+			Console.WriteLine ("User ID IS " + ID);
 
 			//Set up TCP Listener
 			Console.WriteLine(args[0]);
@@ -124,9 +160,26 @@ namespace Tango
 			Console.WriteLine ("Room Group Joined");
 			Console.WriteLine (groupName);
 
+			List<String> results = new List<String> ();
+			roomGroup.OrderedQuery(Vsync.Group.ALL, JOIN_ROOM, ID, new Vsync.EOLMarker(), results); 
+			Boolean full = false;
+			for (int j = 0; j < results.Count; j++) {
+				if (results [j].Equals ("FULL")) {
+					Console.WriteLine ("FULL");
+					full = true;
+				}
+			}
+			if (full) {
+				roomGroup.OrderedSend (LEAVE_ROOM, ID);
+				Byte[] r = Encoding.UTF8.GetBytes("ROOM FULL");
+				Byte[] resp = Helpers.Connections.encode(r);
+				stream.Write(resp, 0, resp.Length);
+				return;
+			}
+								
 			System.Timers.Timer t = new System.Timers.Timer ();
 			t.Elapsed += send_info;
-			t.Interval = 100;
+			t.Interval = 50;
 			t.Start ();
 
 			Byte[] bytes = new Byte[4096];
@@ -164,25 +217,24 @@ namespace Tango
 				}  else {
 					//decode input and put into dictionary if valid location data
 					Byte[] decoded = Helpers.Connections.decode (bytes);
-					string s = System.Text.Encoding.UTF8.GetString(decoded, 0, decoded.Length);
-					Console.WriteLine ("RECEIVED MESSAGE " + s);
+					//string s = System.Text.Encoding.UTF8.GetString(decoded, 0, decoded.Length);
+					//Console.WriteLine ("RECEIVED MESSAGE " + s);
 					String response = Helpers.Connections.parseAndPut(decoded);
-					Console.WriteLine ("Received these coordinates" + response);
-					roomGroup.OrderedSend (0, ID, response); 
+					//Console.WriteLine ("Received these coordinates" + response);
+					if (response == null) {
+						Console.WriteLine ("NULL STUFF RECEIVED");
+					} else {
+						roomGroup.OrderedSend (UPDATE, ID, response); 
+					}
 					i = Helpers.Connections.checkRead(stream, bytes);
-					Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
+					//Console.WriteLine ("Decoded: {0}", System.Text.Encoding.UTF8.GetString (decoded, 0, decoded.Length));
 				}
 			}
 
 			Console.WriteLine ("Reached end of input");
 			t.Stop ();
 			client.Close ();
-
-			//Quick visual check to make sure initialization goes smoothely
-			//UNNECESSARY -> TAKE OUT LATER
-			/*List<string> valuesDic = new List<string> ();
-			g.Query (1, REFRESH, new EOLMarker() , valuesDic);
-			Console.WriteLine (valuesDic [0]);*/
+		
 		}
 	}
 }

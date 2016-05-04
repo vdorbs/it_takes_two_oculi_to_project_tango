@@ -44,13 +44,14 @@ namespace Server
 			TcpListener server = new TcpListener (7000);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7000.{0}Waiting for a connection...", Environment.NewLine);
-			int counter = 10000;
+			int counter = 7568;
+			String room = null;
 			while (true) {
 				TcpClient client = server.AcceptTcpClient ();
 				counter++;
 				NetworkStream stream = client.GetStream();
 				bool connect = true;
-				String room = null;
+				//String room = null;
 				while (connect) {
 					Byte[] bytes = new Byte[4096];
 					String data = null;
@@ -75,7 +76,7 @@ namespace Server
 						Byte[] response = Helpers.Connections.decode (bytes);
 						string r = System.Text.Encoding.ASCII.GetString (response);
 						room = r;
-						Console.WriteLine (r);
+						Console.WriteLine ("The room name is " + r);
 						break;
 					}
 				}
@@ -91,6 +92,7 @@ namespace Server
 
 				Byte[] q = Encoding.UTF8.GetBytes (counter.ToString ());
 				Byte[] resp = Helpers.Connections.encode (q); 
+				Console.WriteLine ("HEY " + "../launchServer.sh " + counter.ToString () + " " + room);
 				Process proc = new Process {
 					StartInfo = new ProcessStartInfo {
 						FileName = "/bin/bash",
@@ -101,9 +103,10 @@ namespace Server
 				};
 
 				proc.Start();
+				Console.WriteLine ("A Client Connected!Handler server started.");
+				System.Threading.Thread.Sleep(1000);
 				stream.Write(resp, 0, resp.Length);
-				Console.WriteLine ("A Client Connected! Port Number sent, Handler server started.");
-
+				Console.WriteLine ("Port Number Sent");
 			}
 		}
 	}
