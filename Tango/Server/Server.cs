@@ -10,17 +10,37 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Diagnostics;
 using Helpers;
+using Vsync;
 
 namespace Server
 {
 	public class Server
 	{
-		public Server ()
-		{
-
+		private class Room{
+			public List<int> ports = new List<int> ();
 		}
 
+		//Empty constructor
+		//public Server ()
+		//{
+
+ //		}
+		public const int UPDATE = 0;
+		public const int LOOKUP = 1;
 		public static void Main(String[] Args){
+			//Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+			Vsync.Group loadGroup = new Vsync.Group ("Load Balancers");
+			/*loadGroup.Handlers [UPDATE] += delegate(string id, Room r) {
+				rooms [id] = r;
+			};
+			loadGroup.Handlers [LOOKUP] += delegate(string id) {
+				loadGroup.Reply (rooms [id]);
+			}; */
+			loadGroup.DHTEnable (1, 1, 1, 86400000);
+			loadGroup.Join ();
+			Console.WriteLine ("Server Group Joined");
+
+
 			TcpListener server = new TcpListener (7000);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7000.{0}Waiting for a connection...", Environment.NewLine);
@@ -59,6 +79,15 @@ namespace Server
 						break;
 					}
 				}
+				Room roomObj = loadGroup.DHTGet (room);
+				List<int> portlst;
+				if (roomObj != null) {
+					portlst = roomObj.ports;
+				}
+				portlst.Add (counter);
+				Room updatedRoom = new Room ();
+				updatedRoom.ports = portlst;
+				loadGroup.DHTPut (room, updatedRoom);
 
 				Byte[] q = Encoding.UTF8.GetBytes (counter.ToString ());
 				Byte[] resp = Helpers.Connections.encode (q); 
