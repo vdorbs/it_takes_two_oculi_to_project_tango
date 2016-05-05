@@ -29,6 +29,8 @@ namespace Server
 		public const int LOOKUP = 1;
 		public static void Main(String[] Args){
 			//Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+			VsyncSystem.Start ();
+			Console.WriteLine ("vsync started");
 			Vsync.Group loadGroup = new Vsync.Group ("Load Balancers");
 			/*loadGroup.Handlers [UPDATE] += delegate(string id, Room r) {
 				rooms [id] = r;
@@ -80,16 +82,16 @@ namespace Server
 						break;
 					}
 				}
-				Room roomObj = loadGroup.DHTGet (room);
-				List<int> portlst;
-				if (roomObj != null) {
-					portlst = roomObj.ports;
+				Console.WriteLine ("good here...");
+				List<int> portlst = loadGroup.DHTGet<String, List<int>>((string) room);
+				Console.WriteLine ("good after this ish");
+				if (portlst == null) {
+					portlst = new List<int> ();
 				}
 				portlst.Add (counter);
-				Room updatedRoom = new Room ();
-				updatedRoom.ports = portlst;
-				loadGroup.DHTPut (room, updatedRoom);
-
+				Console.WriteLine ("putting");
+				loadGroup.DHTPut (room, portlst);
+				Console.WriteLine ("put");
 				Byte[] q = Encoding.UTF8.GetBytes (counter.ToString ());
 				Byte[] resp = Helpers.Connections.encode (q); 
 				Console.WriteLine ("HEY " + "../launchServer.sh " + counter.ToString () + " " + room);
