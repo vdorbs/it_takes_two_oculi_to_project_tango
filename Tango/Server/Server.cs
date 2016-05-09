@@ -28,21 +28,24 @@ namespace Server
 		public const int UPDATE = 0;
 		public const int LOOKUP = 1;
 		public static void Main(String[] Args){
-			//Dictionary<string, Room> rooms = new Dictionary<string, Room> ();
+			Dictionary<string, List<int>> rooms = new Dictionary<string, List<int>> ();
 			VsyncSystem.Start ();
 			Console.WriteLine ("vsync started");
 			Vsync.Group loadGroup = new Vsync.Group ("Load Balancers");
-			/*loadGroup.Handlers [UPDATE] += delegate(string id, Room r) {
+			loadGroup.Handlers [UPDATE] += (Action<String, List<int>> ) delegate(string id, List<int> r) {
 				rooms [id] = r;
 			};
-			loadGroup.Handlers [LOOKUP] += delegate(string id) {
-				loadGroup.Reply (rooms [id]);
-			}; */
-			loadGroup.DHTEnable (1, 1, 1, 86400000);
+			loadGroup.Handlers [LOOKUP] += (Action<String>) delegate(string id) {
+				if (rooms.ContainsKey(id)){
+					loadGroup.Reply (rooms [id]);
+				}
+				else{
+					loadGroup.Reply(new List<int>());
+				}
+			}; 
+			//loadGroup.DHTEnable (1, 1, 1, 86400000);
 			loadGroup.Join ();
 			Console.WriteLine ("Server Group Joined");
-
-
 			TcpListener server = new TcpListener (7000);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7000.{0}Waiting for a connection...", Environment.NewLine);
@@ -78,11 +81,46 @@ namespace Server
 						Byte[] response = Helpers.Connections.decode (bytes);
 						string r = System.Text.Encoding.ASCII.GetString (response);
 						room = r;
-						Console.WriteLine ("The room name is " + r);
-						break;
+						bool isValid = true;
+						if (room [0] == 'j') {
+							try
+							{
+								List<List<int>> rez = new List<List<int>>();
+								loadGroup.OrderedQuery(1, LOOKUP, room, new Vsync.EOLMarker (), rez);
+								List<int> ports = rez[0];
+								if (ports.Count == 0){
+									isValid = false;
+								}
+								room = room.Substring(1);
+							}
+							catch(Exception e){
+								Console.WriteLine ("idk man");
+							}
+						}
+
+						if (isValid) {
+							Console.WriteLine ("The room name is " + r);
+							break;
+						}
 					}
 				}
-				Console.WriteLine ("good here...");
+
+
+				List<List<int>> result = new List<List<int>> ();
+				try
+				{
+					loadGroup.OrderedQuery (1, LOOKUP, room, new Vsync.EOLMarker (), result);
+					List<int> ports = result[0];
+					ports.Add (counter);
+					loadGroup.OrderedSend (UPDATE, room, ports);
+				}
+				catch(Exception e){
+					Console.WriteLine ("hmm....");
+				}
+
+
+
+				/*Console.WriteLine ("good here...");
 				List<int> portlst = loadGroup.DHTGet<String, List<int>>((string) room);
 				Console.WriteLine ("good after this ish");
 				if (portlst == null) {
@@ -91,7 +129,8 @@ namespace Server
 				portlst.Add (counter);
 				Console.WriteLine ("putting");
 				loadGroup.DHTPut (room, portlst);
-				Console.WriteLine ("put");
+				Console.WriteLine ("put"); */
+
 				Byte[] q = Encoding.UTF8.GetBytes (counter.ToString ());
 				Byte[] resp = Helpers.Connections.encode (q); 
 				Console.WriteLine ("HEY " + "../launchServer.sh " + counter.ToString () + " " + room);
