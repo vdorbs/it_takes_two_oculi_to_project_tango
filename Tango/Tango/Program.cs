@@ -29,9 +29,6 @@ namespace Tango
 		}
 	}
 
-
-
-
 	class MainClass
 	{
 		//GROUP PARAMS
@@ -57,7 +54,12 @@ namespace Tango
 
 		//System Timers
 		public static System.Timers.Timer send_timer;
+		public static System.Timers.Timer test_timer;
 		public static System.Timers.Timer is_alive_timer;
+
+		public static int updateCount = 0;
+		public static object updateLock = new object();
+
 
 
 		//checks to see if the message wants you to change rooms
@@ -94,20 +96,13 @@ namespace Tango
 			}
 		}
 
-		/*public static void is_alive(Object source, System.Timers.ElapsedEventArgs e) {
-			Console.WriteLine ("IN IS_ALIVE METHOD");
-			if (still_alive) {
-				still_alive = false;
-			} else {
-				Console.WriteLine ("CLOSING CONNECTION BECAUSE NO RESPONSE");
-				roomGroup.OrderedSend (LEAVE_ROOM, ID);
-				send_timer.Stop ();
-				is_alive_timer.Stop ();
-				client.Close ();
-				roomGroup.Leave ();
+		//Function used to test number of updates received by the system
+		public static void test_print(Object source, System.Timers.ElapsedEventArgs e) {
+			lock (updateLock) {
+				Console.WriteLine ("In 10 seconds there were " + updateCount + " updates.");
+				updateCount = 0;
 			}
-			
-		}*/
+		}
 
 		public static void Main (string[] args)
 		{
@@ -156,6 +151,9 @@ namespace Tango
 			roomGroup.Handlers [UPDATE] += (Action<string,string>)delegate(string username, string val) {
 				lock (currentRoom) {
 					currentRoom.playerLocs [username] = val;
+				}
+				lock (updateLock) {
+					updateCount++;
 				}
 			};
 			roomGroup.Handlers [LOOKUP] += (Action<string>)delegate(string s) {
@@ -216,10 +214,11 @@ namespace Tango
 			send_timer.Interval = UPDATE_RATE;
 			send_timer.Start ();
 
-			/*is_alive_timer = new System.Timers.Timer ();
-			is_alive_timer.Elapsed += is_alive;
-			is_alive_timer.Interval = CLIENT_TIMEOUT;
-			is_alive_timer.Start ();*/
+			test_timer = new System.Timers.Timer ();
+			test_timer.Elapsed += test_print;
+			test_timer.Interval = 10000;
+			test_timer.Start ();
+
 
 			Byte[] bytes = new Byte[4096];
 			String data = null;
@@ -284,7 +283,6 @@ namespace Tango
 			Console.WriteLine ("ROOM GROUP LEAVE"); 
 			//roomGroup.Leave();
 			client.Close ();
-			//Console.WriteLine ("HERE 3");
 		}
 	}
 }
