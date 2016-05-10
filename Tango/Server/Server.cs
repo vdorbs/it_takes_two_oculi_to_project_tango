@@ -33,31 +33,41 @@ namespace Server
 			Dictionary<string, List<int>> rooms = new Dictionary<string, List<int>> ();
 			VsyncSystem.Start ();
 			Console.WriteLine ("vsync started");
-			Vsync.Group loadGroup = new Vsync.Group ("Load Balancers");
-			loadGroup.Handlers [UPDATE] += (Action<String, List<int>> ) delegate(string id, List<int> r) {
+			Vsync.Group lGroup = new Vsync.Group ("Load Balancers");
+			lGroup.Handlers [UPDATE] += (Action<String, List<int>> ) delegate(string id, List<int> r) {
 				rooms [id] = r;
-				Console.WriteLine("Updating...");
+				Console.WriteLine("Updating dict with {0}", id);
 			};
-			loadGroup.Handlers [LOOKUP] += (Action<String>) delegate(string id) {
-				if (rooms.ContainsKey(id)){
-					loadGroup.Reply (rooms [id]);
+			lGroup.Handlers [LOOKUP] += (Action<String>) delegate(string id) {
+				//Console.WriteLine("Looking in dict for {0}:end", id);
+				//bool contains = false;
+				foreach(KeyValuePair<string, List<int>> entry in rooms){
+					//Console.WriteLine("s:{0}:f", entry.Key);
+					if (Int32.Parse(id) == Int32.Parse(entry.Key)){
+						lGroup.Reply(entry.Value);
+						return;
+					}
+				}
+				/*Console.WriteLine(rooms.ContainsKey(id));
+				if (contains){
+					lGroup.Reply (rooms [id]);
 					Console.WriteLine("Found room in dictionary!");
 				}
-				else{
-					loadGroup.Reply(new List<int>());
-					Console.WriteLine("Creating room in dictionary!");
-				}
+				else{ */
+				lGroup.Reply(new List<int>());
+				Console.WriteLine("Creating room in dictionary!");
+
 			}; 
-			loadGroup.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv){
-				loadGroup.SendChkpt(Extensions.FromDictionaryToJson(rooms));
-				loadGroup.EndOfChkpt();
+			lGroup.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv){
+				lGroup.SendChkpt(Extensions.FromDictionaryToJson(rooms));
+				lGroup.EndOfChkpt();
 			};
-			loadGroup.LoadChkpt += (loaddckpt)delegate (string rs) {
+			lGroup.LoadChkpt += (loaddckpt)delegate (string rs) {
 				rooms = Extensions.FromJsonToDictionary(rs);
 			};
 
 			//loadGroup.DHTEnable (1, 1, 1, 86400000);
-			loadGroup.Join ();
+			lGroup.Join ();
 			Console.WriteLine ("Server Group Joined");
 			int port = Int32.Parse (Args [0]);
 			TcpListener server = new TcpListener (port);
@@ -94,8 +104,8 @@ namespace Server
 					} else {
 						Byte[] response = Helpers.Connections.decode (bytes);
 						string r = System.Text.Encoding.ASCII.GetString (response);
-						r = r.Substring(0, 10);
-						room = r.Trim();
+						//r = r.Substring(0, 10);
+						room = r;
 						bool isValid = true;
 						//Console.WriteLine ("{0}", r);
 						//Console.WriteLine ("Length: {1}, Last Char: {0}!", room.Substring ((r.Length - 1)), room.Length);
@@ -104,7 +114,9 @@ namespace Server
 							try
 							{
 								List<List<int>> rez = new List<List<int>>();
-								loadGroup.OrderedQuery(Vsync.Group.ALL, LOOKUP, room, new Vsync.EOLMarker (), rez);
+								room = room.Remove(room.IndexOf("j"), 1);
+								Console.WriteLine(room);
+								lGroup.OrderedQuery(1, LOOKUP, room, new Vsync.EOLMarker (), rez);
 								List<int> ports = rez[0];
 								if (ports.Count == 0){
 									isValid = false;
@@ -113,8 +125,8 @@ namespace Server
 									f = Helpers.Connections.encode(f);
 									stream.Write(f, 0, f.Length);
 								}
-								room = room.Remove(room.IndexOf("j"));
-								r = room;
+								Console.WriteLine(room);
+								//r = room;
 							}
 							catch(Exception e){
 								Console.WriteLine ("Error: {0}", e);
@@ -122,7 +134,7 @@ namespace Server
 						}
 
 						if (isValid) {
-							Console.WriteLine ("The room name is " + r);
+							Console.WriteLine ("The room name is " + room);
 							break;
 						}
 					}
@@ -132,10 +144,10 @@ namespace Server
 				List<List<int>> result = new List<List<int>> ();
 				try
 				{
-					loadGroup.OrderedQuery (Vsync.Group.ALL, LOOKUP, room, new Vsync.EOLMarker (), result);
+					lGroup.OrderedQuery (1, LOOKUP, room, new Vsync.EOLMarker (), result);
 					List<int> ports = result[0];
 					ports.Add (counter);
-					loadGroup.OrderedSend (UPDATE, room, ports);
+					lGroup.OrderedSend (UPDATE, room, ports);
 				}
 				catch(Exception e){
 					Console.WriteLine ("DICTIONARY ADD Error: {0}", e);
