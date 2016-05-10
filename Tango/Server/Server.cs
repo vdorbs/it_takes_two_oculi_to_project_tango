@@ -27,6 +27,8 @@ namespace Server
  //		}
 		public const int UPDATE = 0;
 		public const int LOOKUP = 1;
+		delegate void loaddckpt(string rs);
+
 		public static void Main(String[] Args){
 			Dictionary<string, List<int>> rooms = new Dictionary<string, List<int>> ();
 			VsyncSystem.Start ();
@@ -34,19 +36,31 @@ namespace Server
 			Vsync.Group loadGroup = new Vsync.Group ("Load Balancers");
 			loadGroup.Handlers [UPDATE] += (Action<String, List<int>> ) delegate(string id, List<int> r) {
 				rooms [id] = r;
+				Console.WriteLine("Updating...");
 			};
 			loadGroup.Handlers [LOOKUP] += (Action<String>) delegate(string id) {
 				if (rooms.ContainsKey(id)){
 					loadGroup.Reply (rooms [id]);
+					Console.WriteLine("Found room in dictionary!");
 				}
 				else{
 					loadGroup.Reply(new List<int>());
+					Console.WriteLine("Creating room in dictionary!");
 				}
 			}; 
+			loadGroup.MakeChkpt += (Vsync.ChkptMaker)delegate(View nv){
+				loadGroup.SendChkpt(Extensions.FromDictionaryToJson(rooms));
+				loadGroup.EndOfChkpt();
+			};
+			loadGroup.LoadChkpt += (loaddckpt)delegate (string rs) {
+				rooms = Extensions.FromJsonToDictionary(rs);
+			};
+
 			//loadGroup.DHTEnable (1, 1, 1, 86400000);
 			loadGroup.Join ();
 			Console.WriteLine ("Server Group Joined");
-			TcpListener server = new TcpListener (7000);
+			int port = Int32.Parse (Args [0]);
+			TcpListener server = new TcpListener (port);
 			server.Start ();
 			Console.WriteLine("Server has started on 127.0.0.1:7000.{0}Waiting for a connection...", Environment.NewLine);
 			int counter = 7568;
@@ -80,21 +94,30 @@ namespace Server
 					} else {
 						Byte[] response = Helpers.Connections.decode (bytes);
 						string r = System.Text.Encoding.ASCII.GetString (response);
-						room = r;
+						r = r.Substring(0, 10);
+						room = r.Trim();
 						bool isValid = true;
-						if (room [0] == 'j') {
+						//Console.WriteLine ("{0}", r);
+						//Console.WriteLine ("Length: {1}, Last Char: {0}!", room.Substring ((r.Length - 1)), room.Length);
+						if (room.Contains("j")){
+							Console.WriteLine ("here");
 							try
 							{
 								List<List<int>> rez = new List<List<int>>();
-								loadGroup.OrderedQuery(1, LOOKUP, room, new Vsync.EOLMarker (), rez);
+								loadGroup.OrderedQuery(Vsync.Group.ALL, LOOKUP, room, new Vsync.EOLMarker (), rez);
 								List<int> ports = rez[0];
 								if (ports.Count == 0){
 									isValid = false;
+									Console.WriteLine("BAD ID");
+									byte[] f = Encoding.UTF8.GetBytes("BAD ID");
+									f = Helpers.Connections.encode(f);
+									stream.Write(f, 0, f.Length);
 								}
-								room = room.Substring(1);
+								room = room.Remove(room.IndexOf("j"));
+								r = room;
 							}
 							catch(Exception e){
-								Console.WriteLine ("idk man");
+								Console.WriteLine ("Error: {0}", e);
 							}
 						}
 
@@ -109,13 +132,13 @@ namespace Server
 				List<List<int>> result = new List<List<int>> ();
 				try
 				{
-					loadGroup.OrderedQuery (1, LOOKUP, room, new Vsync.EOLMarker (), result);
+					loadGroup.OrderedQuery (Vsync.Group.ALL, LOOKUP, room, new Vsync.EOLMarker (), result);
 					List<int> ports = result[0];
 					ports.Add (counter);
 					loadGroup.OrderedSend (UPDATE, room, ports);
 				}
 				catch(Exception e){
-					Console.WriteLine ("hmm....");
+					Console.WriteLine ("DICTIONARY ADD Error: {0}", e);
 				}
 
 
