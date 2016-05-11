@@ -36,9 +36,15 @@ namespace Server
 			Vsync.Group lGroup = new Vsync.Group ("Load Balancers");
 			lGroup.Handlers [UPDATE] += (Action<String, List<int>> ) delegate(string id, List<int> r) {
 				foreach(KeyValuePair<string, List<int>> entry in rooms){
-					if (Int32.Parse(id) == Int32.Parse(entry.Key)){
-						rooms[entry.Key] = r;
-						return;
+					try
+					{ 
+						if (Int32.Parse(id) == Int32.Parse(entry.Key)){
+							rooms[entry.Key] = r;
+							return;
+						}
+					}
+					catch (Exception e){
+						//pass through
 					}
 				}
 				rooms[id] = r;
@@ -49,9 +55,15 @@ namespace Server
 				//bool contains = false;
 				foreach(KeyValuePair<string, List<int>> entry in rooms){
 					//Console.WriteLine("s:{0}:f", entry.Key);
-					if (Int32.Parse(id) == Int32.Parse(entry.Key)){
-						lGroup.Reply(entry.Value);
-						return;
+					try
+					{
+						if (Int32.Parse(id) == Int32.Parse(entry.Key)){
+							lGroup.Reply(entry.Value);
+							return;
+						}
+					}
+					catch (Exception e){
+						//pass through
 					}
 				}
 				/*Console.WriteLine(rooms.ContainsKey(id));
