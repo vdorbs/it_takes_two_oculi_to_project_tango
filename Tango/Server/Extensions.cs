@@ -14,7 +14,7 @@ namespace Server
 			foreach(KeyValuePair<string, List<int>> entry in dictionary){
 				String lst = "";
 				foreach (int i in entry.Value) {
-					lst = lst + i.ToString () + ",";
+					lst = lst + i.ToString () + ";";
 				}
 				if (lst.Length > 0) {
 					lst = lst.Substring (0, lst.Length - 1);
@@ -36,7 +36,7 @@ namespace Server
 			Dictionary <string,List<int>> dictionary = new Dictionary<string, List<int>> ();
 			foreach(KeyValuePair<string, string> entry in dct){
 				List<int> l = new List<int> ();
-				string[] l_string = entry.Value.Split (',');
+				string[] l_string = entry.Value.Split (';');
 				foreach (string s in l_string) {
 					l.Add (Int32.Parse(s));
 				}

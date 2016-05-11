@@ -35,8 +35,14 @@ namespace Server
 			Console.WriteLine ("vsync started");
 			Vsync.Group lGroup = new Vsync.Group ("Load Balancers");
 			lGroup.Handlers [UPDATE] += (Action<String, List<int>> ) delegate(string id, List<int> r) {
-				rooms [id] = r;
-				Console.WriteLine("Updating dict with {0}", id);
+				foreach(KeyValuePair<string, List<int>> entry in rooms){
+					if (Int32.Parse(id) == Int32.Parse(entry.Key)){
+						rooms[entry.Key] = r;
+						return;
+					}
+				}
+				rooms[id] = r;
+				Console.WriteLine("Adding {0} to dict", id);
 			};
 			lGroup.Handlers [LOOKUP] += (Action<String>) delegate(string id) {
 				//Console.WriteLine("Looking in dict for {0}:end", id);
